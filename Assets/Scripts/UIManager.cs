@@ -7,7 +7,10 @@ public class UIManager : MonoBehaviour
 
     void OnEnable()
     {
-        GameManager.Instance.OnScoreChanged += UpdateScoreText; // 점수 변경 이벤트 구독
+        if(GameManager.Instance != null)
+        {
+            GameManager.Instance.OnScoreChanged += UpdateScoreText; // 점수 변경 이벤트 구독
+        }
     }
     void Start()
     {
@@ -22,6 +25,9 @@ public class UIManager : MonoBehaviour
 
     void OnDisable()
     {
-        GameManager.Instance.OnScoreChanged -= UpdateScoreText; // 점수 변경 이벤트 구독 해제
+        if(GameManager.Instance != null)
+        {
+            GameManager.Instance.OnScoreChanged -= UpdateScoreText; // 점수 변경 이벤트 구독 해제
+        }
     }
 }
