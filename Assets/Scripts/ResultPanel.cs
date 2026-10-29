@@ -19,15 +19,17 @@ public class ResultPanel : MonoBehaviour
 
     private void HandleStateChanged(GameManager.GameState state)
     {
-        gameOverPanel.SetActive(state == GameManager.GameState.GameOver);
-        clearPanel.SetActive(state == GameManager.GameState.Clear);
+        gameOverPanel.SetActive(state == GameManager.GameState.GameOver); // state가 GameOver일 때 게임 오버 패널 활성화
+        clearPanel.SetActive(state == GameManager.GameState.Clear); // state가 Clear일 때 게임 클리어 패널 활성화
         GameManager gameManager = GameManager.Instance; 
 
-         if (state == GameManager.GameState.GameOver)
-        gameOverScoreText.text = "Score: " + gameManager.Score;
-        else if (state == GameManager.GameState.Clear)
+        if (state == GameManager.GameState.GameOver)
         {
-            clearScoreText.text = "Score: " + gameManager.Score;
+            gameOverScoreText.text = "Score: " + gameManager.Score; // 게임 오버 시 점수만 표시
+        }
+        else if (state == GameManager.GameState.Clear) // 게임 클리어 시 점수, 최고 점수, 별 표시
+        {
+            clearScoreText.text = "Score: " + gameManager.Score; 
             bestScoreText.text = "Best Score: " + gameManager.BestScore;
             for (int i = 0; i < starsImages.Length; i++)
                 starsImages[i].enabled = i < gameManager.Stars;

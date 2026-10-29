@@ -26,6 +26,7 @@ public class PlayerController : MonoBehaviour
     public bool IsGrounded { get; private set; } // 땅에 닿아있는지 여부
     public float SpeedMultiplier { get; set; } = 1f; // 속도 배율
     public bool IsDead { get; private set; } // 플레이어가 죽었는지 여부
+    public bool IsFinished { get; private set; } = false; // 플레이어가 게임을 클리어했는지 여부
 
     public CapColor CurrentCap { get; private set; } // 현재 모자 색깔 enum
 
@@ -40,6 +41,8 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        IsGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer); // 땅에 닿아있는지 여부 확인(layerMask를 이용하여 groundLayer에 닿아있는지 확인)
+
         if (IsDead) 
         {
             if(isTumbling)
@@ -50,7 +53,12 @@ public class PlayerController : MonoBehaviour
             return; // 이미 죽었으면 return
         }
 
-        IsGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer); // 땅에 닿아있는지 여부 확인(layerMask를 이용하여 groundLayer에 닿아있는지 확인)
+        if (IsFinished) 
+        {
+            rb.linearVelocity = new Vector2(Mathf.MoveTowards(rb.linearVelocity.x, 0f, 5f * Time.deltaTime), rb.linearVelocity.y); // 게임 클리어 시 수평 속도를 0으로 설정
+            return; // 이미 클리어했으면 return
+        }
+
         
         float velocityY = rb.linearVelocity.y; 
 
@@ -101,6 +109,12 @@ public class PlayerController : MonoBehaviour
         }
 
         StartCoroutine(GameOverAfterDelay());
+    }
+
+    public void Finish()
+    {
+        if (IsFinished) return; // 이미 클리어했으면 return
+        IsFinished = true; // 플레이어가 게임을 클리어했음을 표시
     }
 
     private IEnumerator GameOverAfterDelay()

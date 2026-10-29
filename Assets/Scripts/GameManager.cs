@@ -12,6 +12,8 @@ public class GameManager : MonoBehaviour
         GameOver,
         Clear
     }
+    [SerializeField] private float star2Ratio = 0.5f; // 별 2개 기준 점수 비율
+    [SerializeField] private float star3Ratio = 0.9f; // 별 3개 기준 점수 비율
 
     public int Score { get; private set; } // 점수
     public event Action<int> OnScoreChanged; // 점수 변경 이벤트
@@ -22,13 +24,14 @@ public class GameManager : MonoBehaviour
 
     public int Stars { get; private set; } // 획득한 별 개수
 
-    private const string BestScoreKey = "BestScore";
+    private string bestScoreKey;
 
 
     void Awake()
     {
         Instance = this; // 싱글톤 인스턴스 설정(유니티에서 많이 사용되는 싱글톤 기법)
-        BestScore = PlayerPrefs.GetInt(BestScoreKey, 0); // 최고 점수 불러오기
+        bestScoreKey = "BestScore_" + SceneManager.GetActiveScene().buildIndex; // 현재 씬의 빌드 인덱스를 기반으로 최고 점수 키 생성
+        BestScore = PlayerPrefs.GetInt(bestScoreKey, 0); // 최고 점수 불러오기, 없으면 0으로 초기화
     }
 
     public void AddScore(int amount)
@@ -48,6 +51,36 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f; // 시간 스케일을 1로 설정하여 게임 속도를 정상으로 되돌림
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); // 현재 씬 재시작
+    }
+
+    public void Clear()
+    {
+        if (State != GameState.Playing) return; // 게임 상태가 Playing이 아닐 경우 클리어 처리하지 않음
+        Stars = CalculateStars(); // 획득한 별 개수 계산
+        if (Score > BestScore) // 현재 점수가 최고 점수보다 높으면
+        {
+            BestScore = Score; // 최고 점수 갱신
+            PlayerPrefs.SetInt(bestScoreKey, BestScore); // 최고 점수 저장
+        }
+        SetState(GameState.Clear); // 게임 상태를 Clear로 변경
+    }
+    private int CalculateStars()
+    {
+        // 씬에 존재하는 모든 RingGroup을 찾음. 클리어 순간에만 한번 호출(update에서 호출하면 성능에 영향이 있을 수 있음)
+        RingGroup[] ringGroups = FindObjectsByType<RingGroup>(FindObjectsSortMode.None); 
+
+        int maxScore = 0;
+        foreach (var ringGroup in ringGroups)
+        {
+            maxScore += ringGroup.MaxScore; // 각 RingGroup의 최대 점수를 합산
+        }
+
+        if (maxScore <= 0) return 1; 
+
+        float ratio = (float)Score / maxScore; // 현재 점수와 최대 점수의 비율 계산
+        if (ratio >= star3Ratio) return 3; // 별 3개 기준 비율 이상이면 별 3개
+        if (ratio >= star2Ratio) return 2; // 별 2개 기준 비율 이상이면 별 2개
+        return 1; // 그 외에는 별 1개
     }
 
     private void SetState(GameState newState)
