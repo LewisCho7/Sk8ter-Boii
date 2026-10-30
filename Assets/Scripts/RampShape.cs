@@ -16,9 +16,13 @@ public class RampShape : MonoBehaviour
     [SerializeField] private float radius = 7f;
     [SerializeField] private float topAngle = 45f;
     [SerializeField] private int segments = 12;
+    [SerializeField] private SpriteRenderer visual;
+
+
 
     private void OnValidate()
     {
+        visual.flipX = mirror; // SpriteRenderer의 flipX 속성 설정
         PolygonCollider2D poly = GetComponent<PolygonCollider2D>();
         Vector2[] points = rampKind == RampKind.Kicker ? BuildKicker() : BuildQuarterPipe();
 

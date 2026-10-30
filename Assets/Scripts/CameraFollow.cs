@@ -29,7 +29,7 @@ public class CameraFollow : MonoBehaviour
         float height = target.position.y - currentGroundY; // 플레이어가 얼마나 높이 올라갔는지 계산
         float extra = Mathf.Max(0, height - followStartHeight) * followRatio; // 플레이어가 followStartHeight 이상 올라갔을 때만 extra 계산
 
-        float x = target.position.x + offset.x; // 카메라 X좌표는 플레이어 X좌표 + offset.x
+        float x = player.IsFalling ? transform.position.x : target.position.x + offset.x; // 카메라 X좌표는 플레이어 X좌표 + offset.x. 구멍에 빠졌을 때는 카메라 X좌표를 유지
         float y = Mathf.SmoothDamp(transform.position.y, currentGroundY + offset.y + extra, ref yVelocity, smoothTimeY); // 카메라 Y좌표는 SmoothDamp를 이용하여 부드럽게 이동
 
         transform.position = new Vector3(x, y, transform.position.z); // 카메라 위치를 업데이트

@@ -1,14 +1,21 @@
 using System;
+using Random = UnityEngine.Random;
 using UnityEngine;
 
 public class Ring : MonoBehaviour
 {
     [SerializeField] CapColor ringColor; // ring 색깔 enum
+    [SerializeField] private float bobAmount = 0.08f; // ring이 위아래로 움직이는 정도
+    [SerializeField] private float bobSpeed = 2f; // ring이 위아래로 움직이는 속도
+    [SerializeField] private float glowAmount = 0.4f; // ring이 빛나는 정도
 
     private SpriteRenderer spriteRenderer;
     private CapsuleCollider2D ringCollider;
     private ParticleSystem ringParticleSystem;
     private RingGroup ringGroup; // ring이 속한 ring group
+    private Vector3 startPos; // ring의 초기 위치
+    private float phase; // ring이 위아래로 움직이는 위상
+    private Color baseColor; // ring의 기본 색상
 
     private bool judged = false; // 플레이어가 ring을 통과했는지 여부
 
@@ -19,11 +26,29 @@ public class Ring : MonoBehaviour
         ringCollider = GetComponent<CapsuleCollider2D>();
         ringParticleSystem = GetComponentInChildren<ParticleSystem>();
         ringGroup = GetComponentInParent<RingGroup>();
+
+        startPos = transform.localPosition; // ring의 초기 위치 저장
+        phase = Random.value * Mathf.PI * 2f; // 위상 랜덤 초기화
+        baseColor = CapType.GetColor(ringColor); // ring 색깔에 따라 기본 색상 저장
+
+        Color fxColor = Color.Lerp(baseColor, Color.white, 0.35f); // ring 색깔과 흰색 사이
+        foreach (ParticleSystem ps in GetComponentsInChildren<ParticleSystem>())
+        {
+            var main = ps.main;
+            main.startColor = fxColor; // 파티클 색깔 변경
+        }
     }
     // Update is called once per frame
     void Update()
     {
-        
+        if(!spriteRenderer.enabled) return; // ring sprite가 비활성화되어 있으면 Update를 실행하지 않음
+
+        float s = Mathf.Sin(Time.time * bobSpeed + phase); // 위아래로 움직이는 정도 계산
+        transform.localPosition = startPos + Vector3.up * s * bobAmount; // ring 위치 업데이트
+
+        float t = (Mathf.Sin(Time.time * bobSpeed * 1.5f + phase) * 0.5f + 0.5f) * glowAmount; // 빛나는 정도 계산
+        spriteRenderer.color = Color.Lerp(baseColor, Color.white, t); // ring 색깔과 흰색 사이를 보간하여 빛나는 효과
+
     }
 
     void OnTriggerStay2D(Collider2D collision)

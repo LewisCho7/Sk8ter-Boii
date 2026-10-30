@@ -21,20 +21,32 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float crashDelaySeconds; // 충돌 후 딜레이 시간
     [SerializeField] private float tiltSpeed = 200f; // tilt 속도
     [SerializeField] private float landingAngleLimit = 30f; // 착지 각도 범위
+    [SerializeField] private float holeSpeedKeep = 0.5f; // 구멍에 빠졌을 때 수평 속도 유지 비율
     [SerializeField] private float tiltRecoverSpeed = 360f; // 기울기 복구 속도
+    [SerializeField] private float boardSpin = 360f; 
     [SerializeField] private int flipScore = 200; // flip 점수
     [SerializeField] private float groundRayLength = 0.6f; // 땅 체크 레이 길이
+    [SerializeField] private Animator animator;
+    [SerializeField] private ParticleSystem dustFx;
+    [SerializeField] private ParticleSystem sparkFx;
+    [SerializeField] private ParticleSystem flipFx;
+
 
     private Rigidbody2D rb;
     private bool isTumbling; // 충돌 후 튀어나가는 상태인지 여부
     private WaitForSeconds crashDelay;
     private float tiltAngle; // 기울기 각도
     private bool wasGrounded; // 이전 프레임의 땅에 닿아있는지 여부
+    private static readonly int GroundedHash = Animator.StringToHash("Grounded");
+    private static readonly int VelocityYHash = Animator.StringToHash("VelocityY");
+    private static readonly int JumpHash = Animator.StringToHash("Jump");
+    private static readonly int CrashHash = Animator.StringToHash("Crash");
 
     public bool IsGrounded { get; private set; } // 땅에 닿아있는지 여부
     public float SpeedMultiplier { get; set; } = 1f; // 속도 배율
     public bool IsDead { get; private set; } // 플레이어가 죽었는지 여부
     public bool IsFinished { get; private set; } = false; // 플레이어가 게임을 클리어했는지 여부
+    public bool IsFalling { get; private set; } // 플레이어가 떨어지고 있는지 여부
 
     public CapColor CurrentCap { get; private set; } // 현재 모자 색깔 enum
 
@@ -53,6 +65,14 @@ public class PlayerController : MonoBehaviour
     {
         Collider2D groundHit = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer); // layerMask를 이용하여 groundLayer에 닿아있는지 확인. collider2D 반환
         IsGrounded = groundHit != null && !(rb.linearVelocity.y > 0.1f && groundHit.usedByEffector); // 올라가는중에 레일에 닿으면 아직 지면이 아님. 내려가는 중에 닿아야 지면.
+        
+        animator.SetBool(GroundedHash, IsGrounded); // 땅에 닿아있는지 여부를 animator에 전달
+        animator.SetFloat(VelocityYHash, rb.linearVelocity.y); // 수직 속도를 전달
+
+        bool alive = !IsDead && !IsFinished;
+        bool onRail = IsGrounded && groundHit.usedByEffector;
+        SetEmit(dustFx, alive && IsGrounded && !onRail); // 땅에 닿아있고 레일이 아니면 dustFx 켜기
+        SetEmit(sparkFx, alive && onRail); // 레일이면 sparkFx 켜기
 
         if (IsDead) 
         {
@@ -101,6 +121,7 @@ public class PlayerController : MonoBehaviour
                 if(flips > 0)
                 {
                     GameManager.Instance.AddScore(flips * flipScore); // 점수 추가
+                    flipFx.Emit(15 * flips); // flipFx 파티클 발생
                     Debug.Log("Flips: " + flips + ", Score added: " + (flips * flipScore)); // 점수 추가 로그 출력
                 }
 
@@ -117,6 +138,7 @@ public class PlayerController : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.Space) && IsGrounded)
         {
             velocityY = jumpPower;  // 점프
+            animator.SetTrigger(JumpHash); // 점프 애니메이션 트리거
         }
 
         rb.linearVelocity = new Vector2(speed * SpeedMultiplier, velocityY); // 키보드로 이동하는게 아니라 speed에 따라 자동 이동
@@ -157,10 +179,13 @@ public class PlayerController : MonoBehaviour
             rb.linearDamping = tumbleDamping; // 충돌 후 미끄러지는 정도 설정
             visual.localPosition += new Vector3(0f, -tumbleDropY, 0f); // 충돌 후 visual을 아래로 떨어뜨림
             isTumbling = true; // 충돌 후 튀어나가는 상태로 설정
+            animator.SetTrigger(CrashHash); // 충돌 애니메이션 트리거
         }
         else
         {
-            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // 구멍에 빠졌을 때는 수평 속도를 0으로 설정
+            IsFalling = true; // 플레이어가 구멍에 빠졌음을 표시
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x * holeSpeedKeep, rb.linearVelocity.y);
+            DetachBoard(rb.linearVelocity, boardSpin); // 구멍에 떨어졌을 때 보드를 분리하고 속도와 회전 적용
         }
 
         StartCoroutine(GameOverAfterDelay());
@@ -193,5 +218,22 @@ public class PlayerController : MonoBehaviour
             return 0f;
         }
         return Vector2.SignedAngle(Vector2.up, hit.normal); // 땅의 법선 벡터와 위쪽 벡터 사이의 각도 반환
+    }
+
+    private void DetachBoard(Vector2 velocity, float spin) // 구멍에 떨어졌을 때 속도, 회전 줘서 보드를 분리
+    {
+        board.SetParent(null); // 보드를 분리
+        boardRb.simulated = true; // 보드 Rigidbody2D 시뮬레이션 활성화
+        boardRb.linearVelocity = velocity; 
+        boardRb.angularVelocity = spin; 
+    }
+
+    private void SetEmit(ParticleSystem ps, bool on)
+    {
+        var emission = ps.emission;
+        if(emission.enabled != on)
+        {
+            emission.enabled = on;
+        }
     }
 }

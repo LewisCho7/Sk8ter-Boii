@@ -114,6 +114,7 @@ MonoBehaviour:
   radius: 7
   topAngle: 45
   segments: 12
+  visual: {fileID: 3962189519713179347}
 --- !u!1 &6658603713450228944
 GameObject:
   m_ObjectHideFlags: 0
@@ -193,7 +194,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: -4
   m_MaskInteraction: 0
   m_Sprite: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
