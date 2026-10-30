@@ -12,13 +12,15 @@ public class RingGroup : MonoBehaviour
         totalRings = GetComponentsInChildren<Ring>().Length; 
     }
 
-    public void OnRingCollected()
+    public void OnRingCollected(Vector3 position)
     {
         collectedRings++;
         GameManager.Instance.AddScore(ringScore); // 점수 추가
+        PopupManager.Instance.Show(position + new Vector3(2f, 0.5f, 0f), "+" + ringScore, Color.white); // 점수 팝업 표시
         if (collectedRings >= totalRings)
         {
             GameManager.Instance.AddScore(bonusScore); // 보너스 점수 추가
+            PopupManager.Instance.Show(position + Vector3.up * 1.2f, "+" + bonusScore, new Color(1f, 0.85f, 0.2f), 1.4f); // 보너스 점수 팝업 표시
         }
     }
     

@@ -91,4 +91,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81c7a64ea2188df41bbe928dbbe4768f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  launchPower: 20
+  launchPower: 23

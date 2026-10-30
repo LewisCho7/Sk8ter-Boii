@@ -34,6 +34,14 @@ public class GameManager : MonoBehaviour
         BestScore = PlayerPrefs.GetInt(bestScoreKey, 0); // 최고 점수 불러오기, 없으면 0으로 초기화
     }
 
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            GoToTitle(); // Escape 키를 누르면 타이틀 화면으로 이동
+        }
+    }
+
     public void AddScore(int amount)
     {
         if (State != GameState.Playing) return; // 게임 상태가 Playing이 아닐 경우 점수 추가하지 않음
@@ -88,5 +96,22 @@ public class GameManager : MonoBehaviour
         if (State == newState) return; // 현재 상태와 새 상태가 같으면 변경하지 않음
         State = newState; // 게임 상태 변경
         OnStateChanged?.Invoke(State); // 게임 상태 변경 이벤트 호출
+    }
+
+    public void NextStage() // 다음 스테이지로 이동
+    {
+        Time.timeScale = 1f;
+        int next = SceneManager.GetActiveScene().buildIndex + 1;
+        if (next >= SceneManager.sceneCountInBuildSettings)
+        {
+            next = 0;
+        }
+        SceneManager.LoadScene(next);
+    }
+
+    public void GoToTitle() // 타이틀 화면으로 이동
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(0);
     }
 }

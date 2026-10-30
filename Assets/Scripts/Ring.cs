@@ -8,6 +8,8 @@ public class Ring : MonoBehaviour
     [SerializeField] private float bobAmount = 0.08f; // ring이 위아래로 움직이는 정도
     [SerializeField] private float bobSpeed = 2f; // ring이 위아래로 움직이는 속도
     [SerializeField] private float glowAmount = 0.4f; // ring이 빛나는 정도
+    [SerializeField] private AudioClip ringClip;
+
 
     private SpriteRenderer spriteRenderer;
     private CapsuleCollider2D ringCollider;
@@ -71,8 +73,9 @@ public class Ring : MonoBehaviour
             spriteRenderer.enabled = false; // ring sprite 비활성화
             ringCollider.enabled = false; // ring collider 비활성화
             ringParticleSystem.Play(); // 파티클 재생
+            SoundManager.Instance.Play(ringClip); // ring 통과 효과음 재생
             if(ringGroup != null)
-                ringGroup.OnRingCollected(); // RingGroup에 통과한 ring을 알림 -> 점수 추가
+                ringGroup.OnRingCollected(transform.position); // RingGroup에 통과한 ring을 알림 -> 점수 추가
         }
     }
 

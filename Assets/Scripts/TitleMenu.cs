@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public class TitleMenu : MonoBehaviour
 {
     [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private GameObject howToPlayPanel;
     [SerializeField] private Slider volumeSlider;
 
     void Start()
@@ -25,6 +26,16 @@ public class TitleMenu : MonoBehaviour
     public void CloseSettings()
     {
         settingsPanel.SetActive(false);
+    }
+
+    public void OpenHowToPlay()
+    {
+        howToPlayPanel.SetActive(true);
+    }
+
+    public void CloseHowToPlay()
+    {
+        howToPlayPanel.SetActive(false);
     }
 
     public void SetVolume(float value)

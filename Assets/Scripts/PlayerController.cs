@@ -24,19 +24,32 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float holeSpeedKeep = 0.5f; // 구멍에 빠졌을 때 수평 속도 유지 비율
     [SerializeField] private float tiltRecoverSpeed = 360f; // 기울기 복구 속도
     [SerializeField] private float boardSpin = 360f; 
+    [SerializeField] private float boardGap = 0.12f; // 점프 후 보드와 플레이어 사이의 최대 간격
+    [SerializeField] private float boardGapSpeed = 2f; // 점프 후 보드와 플레이어가 떨어졌다가 다시 붙는 속도
     [SerializeField] private int flipScore = 200; // flip 점수
     [SerializeField] private float groundRayLength = 0.6f; // 땅 체크 레이 길이
     [SerializeField] private Animator animator;
-    [SerializeField] private ParticleSystem dustFx;
-    [SerializeField] private ParticleSystem sparkFx;
-    [SerializeField] private ParticleSystem flipFx;
+    [SerializeField] private ParticleSystem dustFx; // 땅에 닿았을 때 dust 파티클
+    [SerializeField] private ParticleSystem sparkFx; // 레일에 닿았을 때 spark 파티클
+    [SerializeField] private ParticleSystem flipFx; // flip 성공 시 파티클
+    [SerializeField] private AudioClip jumpClip; // 점프 효과음
+    [SerializeField] private AudioClip landClip; // 착지 효과음
+    [SerializeField] private AudioClip flipClip; // flip 성공 효과음
+    [SerializeField] private AudioClip crashClip; // 충돌 효과음
+    [SerializeField] private AudioClip slideClip; // 레일에 닿았을 때 효과음
+    [SerializeField] private AudioSource rollSource; // 롤링 소리
+    [SerializeField] private AudioSource grindSource; // 레일 소리
+
 
 
     private Rigidbody2D rb;
     private bool isTumbling; // 충돌 후 튀어나가는 상태인지 여부
     private WaitForSeconds crashDelay;
     private float tiltAngle; // 기울기 각도
+    private float boardBaseY; // 보드의 초기 Y 위치
+    private float currentGap; // 점프 후 보드와 플레이어 사이의 현재 간격
     private bool wasGrounded; // 이전 프레임의 땅에 닿아있는지 여부
+    private bool wasOnRail; // 이전 프레임의 레일에 닿아있는지 여부
     private static readonly int GroundedHash = Animator.StringToHash("Grounded");
     private static readonly int VelocityYHash = Animator.StringToHash("VelocityY");
     private static readonly int JumpHash = Animator.StringToHash("Jump");
@@ -55,6 +68,7 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         boardRb = board.GetComponent<Rigidbody2D>();
         boardRb.simulated = false; // 보드 Rigidbody2D 시뮬레이션 비활성화
+        boardBaseY = board.localPosition.y; // 보드의 초기 Y 위치 저장
         CurrentCap = CapColor.Blue; // 초기 모자 색깔 설정
         capSprite.color = CapType.GetColor(CurrentCap);
         crashDelay = new WaitForSeconds(crashDelaySeconds);
@@ -74,6 +88,14 @@ public class PlayerController : MonoBehaviour
         SetEmit(dustFx, alive && IsGrounded && !onRail); // 땅에 닿아있고 레일이 아니면 dustFx 켜기
         SetEmit(sparkFx, alive && onRail); // 레일이면 sparkFx 켜기
 
+        SetLoop(rollSource, alive && IsGrounded && !onRail); // 땅에 닿아있으면 rollSource 켜기
+        SetLoop(grindSource, alive && onRail); // 레일이면 grindSource 켜기
+        if (alive && onRail && !wasOnRail)
+        {
+            SoundManager.Instance.Play(slideClip);
+        }
+        wasOnRail = onRail;
+
         if (IsDead) 
         {
             if(isTumbling)
@@ -86,8 +108,19 @@ public class PlayerController : MonoBehaviour
 
         if (IsFinished) 
         {
-            rb.linearVelocity = new Vector2(Mathf.MoveTowards(rb.linearVelocity.x, 0f, 5f * Time.deltaTime), rb.linearVelocity.y); // 게임 클리어 시 수평 속도를 0으로 설정
-            return; // 이미 클리어했으면 return
+            // 게임 클리어 후에는 속도를 줄이면서 앞으로 이동
+            rb.linearVelocity = new Vector2(Mathf.MoveTowards(rb.linearVelocity.x, 0f, 5f * Time.deltaTime), rb.linearVelocity.y);
+
+            // 기울기 각도 복구
+            float targetAngle = IsGrounded ? GetGroundAngle() : 0f;
+            tiltAngle = Mathf.DeltaAngle(0f, tiltAngle);
+            tiltAngle = Mathf.MoveTowardsAngle(tiltAngle, targetAngle, tiltRecoverSpeed * Time.deltaTime);
+            visual.localRotation = Quaternion.Euler(0, 0, tiltAngle);
+
+            // 점프 후 보드와 플레이어 사이 간격 복구
+            currentGap = Mathf.MoveTowards(currentGap, 0f, boardGapSpeed * Time.deltaTime);
+            board.localPosition = new Vector3(board.localPosition.x, boardBaseY - currentGap, board.localPosition.z);
+            return;
         }
 
         if(!IsGrounded)
@@ -122,23 +155,38 @@ public class PlayerController : MonoBehaviour
                 {
                     GameManager.Instance.AddScore(flips * flipScore); // 점수 추가
                     flipFx.Emit(15 * flips); // flipFx 파티클 발생
+                    SoundManager.Instance.Play(flipClip); // flip 효과음 재생
+
+                    string flipName = tiltAngle > 0f ? "BACKFLIP" : "FRONTFLIP"; // backflip인지 frontflip인지 구분
+                    if (flips > 1)
+                    {
+                        flipName += " x" + flips;
+                    }
+                    PopupManager.Instance.Show(transform.position + new Vector3(2f, 1.5f, 0f), flipName + "\n+" + (flips * flipScore), Color.black); // flip 점수 팝업 표시
                     Debug.Log("Flips: " + flips + ", Score added: " + (flips * flipScore)); // 점수 추가 로그 출력
                 }
 
                 tiltAngle = Mathf.DeltaAngle(0f, tiltAngle); // 착지 시 기울기 각도 초기화
+                SoundManager.Instance.Play(landClip); // 착지 효과음 재생
             }
 
             tiltAngle = Mathf.MoveTowardsAngle(tiltAngle, groundAngle, tiltRecoverSpeed * Time.deltaTime); // 착지 시 기울기 각도 복구
         }
         wasGrounded = IsGrounded; // 이전 프레임의 땅에 닿아있는지 여부 저장
         visual.localRotation = Quaternion.Euler(0, 0, tiltAngle); // 기울기 각도 적용
-        
-        float velocityY = rb.linearVelocity.y; 
+
+        float airT = IsGrounded ? 0f : 1f - Mathf.Clamp01(Mathf.Abs(rb.linearVelocity.y) / jumpPower); // 공중에 떠있는 정도
+        float targetGap = Mathf.Sqrt(airT) * boardGap; // 점프 후 보드와 플레이어 사이의 목표 간격 계산
+        currentGap = Mathf.MoveTowards(currentGap, targetGap, boardGapSpeed * Time.deltaTime); // 점프 후 보드와 플레이어 사이의 현재 간격을 목표 간격으로 이동
+        board.localPosition = new Vector3(board.localPosition.x, boardBaseY - currentGap, board.localPosition.z); // 점프 후 보드와 플레이어 사이의 현재 간격 적용
+
+        float velocityY = rb.linearVelocity.y; // 수직 속도
 
         if(Input.GetKeyDown(KeyCode.Space) && IsGrounded)
         {
             velocityY = jumpPower;  // 점프
             animator.SetTrigger(JumpHash); // 점프 애니메이션 트리거
+            SoundManager.Instance.Play(jumpClip); // 점프 효과음 재생
         }
 
         rb.linearVelocity = new Vector2(speed * SpeedMultiplier, velocityY); // 키보드로 이동하는게 아니라 speed에 따라 자동 이동
@@ -179,6 +227,7 @@ public class PlayerController : MonoBehaviour
             rb.linearDamping = tumbleDamping; // 충돌 후 미끄러지는 정도 설정
             visual.localPosition += new Vector3(0f, -tumbleDropY, 0f); // 충돌 후 visual을 아래로 떨어뜨림
             isTumbling = true; // 충돌 후 튀어나가는 상태로 설정
+            SoundManager.Instance.Play(crashClip); // 충돌 효과음 재생
             animator.SetTrigger(CrashHash); // 충돌 애니메이션 트리거
         }
         else
@@ -234,6 +283,18 @@ public class PlayerController : MonoBehaviour
         if(emission.enabled != on)
         {
             emission.enabled = on;
+        }
+    }
+
+    private void SetLoop(AudioSource src, bool on)
+    {
+        if(on && !src.isPlaying)
+        {
+            src.Play();
+        }
+        else if(!on && src.isPlaying)
+        {
+            src.Stop();
         }
     }
 }

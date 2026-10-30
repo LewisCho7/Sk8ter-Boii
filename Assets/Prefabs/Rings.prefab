@@ -147,6 +147,7 @@ MonoBehaviour:
   bobAmount: 0.08
   bobSpeed: 2
   glowAmount: 0.4
+  ringClip: {fileID: 8300000, guid: ab41184ea3b954946a4b2f62a8f2fc58, type: 3}
 --- !u!1 &6290941130894026348
 GameObject:
   m_ObjectHideFlags: 0
