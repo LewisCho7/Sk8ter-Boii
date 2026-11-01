@@ -18,6 +18,11 @@ public class TitleMenu : MonoBehaviour
         SceneManager.LoadScene(1); // 게임 씬 로드
     }
 
+    public void OnQuit()
+    {
+        Application.Quit(); // 게임 종료
+    }
+
     public void OpenSettings()
     {
         settingsPanel.SetActive(true);
