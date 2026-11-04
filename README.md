@@ -76,4 +76,4 @@ Assets/
 
 ## 라이선스
 
-[선택: 코드 라이선스. 정하지 않으면 All rights reserved]
+All rights reserved
