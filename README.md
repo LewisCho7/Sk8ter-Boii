@@ -13,7 +13,7 @@
 1. [Releases](../../releases)에서 `Sk8terBoii.zip`을 받아 압축을 푼다.
 2. `Sk8terBoii.exe`를 실행한다. (Windows)
    - 서명되지 않은 파일이라 SmartScreen 경고가 뜨면 "추가 정보 → 실행"을 누른다.
-3. 소스로 열려면 Unity [버전]으로 이 저장소의 폴더를 연다.
+3. 소스로 열려면 Unity 6000.3.20f1로 이 저장소의 폴더를 연다.
 
 ## 조작
 
